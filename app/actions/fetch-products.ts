@@ -66,7 +66,8 @@ async function fetchSerperShopping(query: string, gl: string = "us", page: numbe
     return null;
   }
 
-  for (let i = 0; i < keys.length; i++) {
+  const maxAttempts = Math.min(keys.length, 2); // Try at most 2 keys to keep it extremely fast
+  for (let i = 0; i < maxAttempts; i++) {
     const activeKeyIdx = (keyIndex + i) % keys.length;
     const activeKey = keys[activeKeyIdx];
     const maskedKey = `${activeKey.slice(0, 6)}...${activeKey.slice(-4)}`;
@@ -79,9 +80,11 @@ async function fetchSerperShopping(query: string, gl: string = "us", page: numbe
         headers: {
           "X-API-KEY": activeKey,
           "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         },
         body: JSON.stringify({ q: query, num: 40, gl, page }),
         cache: "no-store",
+        signal: AbortSignal.timeout(5000), // 5s timeout guard for slow network
       });
 
       if (!res.ok) {
@@ -102,8 +105,10 @@ async function fetchSerperShopping(query: string, gl: string = "us", page: numbe
       console.log(`[Serper] Success — ${data.shopping?.length ?? 0} shopping results returned.`);
       return data;
 
-    } catch (err) {
-      console.error(`[Serper] Network error key=[${maskedKey}]:`, err);
+    } catch (err: any) {
+      console.error(`[Serper] Network error key=[${maskedKey}]:`, err.message || err);
+      // SSL/Network level error means connection is blocked. Retrying other keys is futile.
+      break;
     }
   }
 
@@ -382,18 +387,22 @@ export async function getAutocompleteSuggestionsAction(
   const rawQuery = query.trim();
 
   // Try fetching autocomplete with key rotation
-  for (let i = 0; i < keys.length; i++) {
+  const maxAttempts = Math.min(keys.length, 2); // Try at most 2 keys to keep it extremely fast
+  for (let i = 0; i < maxAttempts; i++) {
     const activeKeyIdx = (keyIndex + i) % keys.length;
     const activeKey = keys[activeKeyIdx];
+    const maskedKey = `${activeKey.slice(0, 6)}...${activeKey.slice(-4)}`;
     try {
       const res = await fetch("https://google.serper.dev/autocomplete", {
         method: "POST",
         headers: {
           "X-API-KEY": activeKey,
           "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         },
         body: JSON.stringify({ q: rawQuery }),
         cache: "no-store",
+        signal: AbortSignal.timeout(5000), // 5s timeout guard
       });
 
       if (!res.ok) continue;
@@ -423,8 +432,10 @@ export async function getAutocompleteSuggestionsAction(
         keyIndex = (activeKeyIdx + 1) % keys.length;
         return filtered;
       }
-    } catch (err) {
-      console.error("[Autocomplete] Error:", err);
+    } catch (err: any) {
+      console.error(`[Autocomplete] Error key=[${maskedKey}]:`, err.message || err);
+      // SSL/Network level error means connection is blocked. Retrying other keys is futile.
+      break;
     }
   }
 

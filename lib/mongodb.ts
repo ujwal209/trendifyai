@@ -15,16 +15,20 @@ declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
+const options = {
+  autoSelectFamily: false,
+};
+
 if (process.env.NODE_ENV === "development") {
   // In development mode, use a global variable so that the MongoClient
   // is not recreated on every hot-reload
   if (!global._mongoClientPromise) {
-    client = new MongoClient(uri);
+    client = new MongoClient(uri, options);
     global._mongoClientPromise = client.connect();
   }
   clientPromise = global._mongoClientPromise;
 } else {
-  client = new MongoClient(uri);
+  client = new MongoClient(uri, options);
   clientPromise = client.connect();
 }
 

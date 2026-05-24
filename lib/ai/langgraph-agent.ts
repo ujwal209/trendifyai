@@ -141,7 +141,8 @@ async function fetchSerperSearch(query: string): Promise<any> {
     return null;
   }
 
-  for (let i = 0; i < keys.length; i++) {
+  const maxAttempts = Math.min(keys.length, 2); // Try at most 2 keys to keep it extremely fast
+  for (let i = 0; i < maxAttempts; i++) {
     const activeKeyIdx = (searchKeyIndex + i) % keys.length;
     const activeKey = keys[activeKeyIdx];
     const maskedKey = `${activeKey.slice(0, 6)}...${activeKey.slice(-4)}`;
@@ -154,9 +155,11 @@ async function fetchSerperSearch(query: string): Promise<any> {
         headers: {
           "X-API-KEY": activeKey,
           "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         },
         body: JSON.stringify({ q: query, num: 10 }),
         cache: "no-store",
+        signal: AbortSignal.timeout(5000), // 5s timeout guard for slow network
       });
 
       if (!res.ok) {
@@ -174,8 +177,10 @@ async function fetchSerperSearch(query: string): Promise<any> {
 
       searchKeyIndex = (activeKeyIdx + 1) % keys.length;
       return data;
-    } catch (err) {
-      console.error(`[Serper Search] Network error key=[${maskedKey}]:`, err);
+    } catch (err: any) {
+      console.error(`[Serper Search] Network error key=[${maskedKey}]:`, err.message || err);
+      // SSL/Network level error means connection is blocked. Retrying other keys is futile.
+      break;
     }
   }
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, Heart, ChevronDown, User, LogOut, Percent, Sun, Moon, Settings, LayoutDashboard, Sparkles } from "lucide-react";
 import { useWatchlist } from "@/lib/watchlist-context";
+import { useAi } from "@/lib/ai-context";
 import { getAutocompleteSuggestionsAction } from "@/app/actions/fetch-products";
 import { toast } from "sonner";
 import { detectUserCountry } from "@/lib/comparator-utils";
@@ -26,6 +27,7 @@ function HeaderContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { watchlistItems, openWatchlist } = useWatchlist();
+  const { setIsOpen } = useAi();
 
   const [inputVal, setInputVal] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -237,9 +239,16 @@ function HeaderContent() {
               )}
             </div>
 
+
             {/* AI Assistant Mobile */}
             <button
-              onClick={() => router.push(`/ai-assistant?gl=${currentGl}`)}
+              onClick={() => {
+                if (currentUser) {
+                  router.push(`/ai-assistant?gl=${currentGl}`);
+                } else {
+                  setIsOpen(true);
+                }
+              }}
               className="p-2 hover:bg-white/10 rounded-lg text-white transition-all border-0 bg-transparent cursor-pointer"
               title="AI Assistant"
             >
@@ -454,7 +463,13 @@ function HeaderContent() {
 
           {/* AI Assistant Icon Desktop */}
           <button
-            onClick={() => router.push(`/ai-assistant?gl=${currentGl}`)}
+            onClick={() => {
+              if (currentUser) {
+                router.push(`/ai-assistant?gl=${currentGl}`);
+              } else {
+                setIsOpen(true);
+              }
+            }}
             className="relative flex items-center gap-2 text-sm font-bold transition-all hover:text-zinc-150 cursor-pointer hover:scale-105 active:scale-95"
             title="AI Assistant"
           >

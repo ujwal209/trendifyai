@@ -270,7 +270,7 @@ export default function AiAssistant({
     <SidebarProvider open={historyOpen} onOpenChange={setHistoryOpen} className="min-h-0 h-full w-full bg-background overflow-hidden">
       
       {/* 1. Sidebar Session History */}
-      {!isReadOnly && (
+      {!isReadOnly && isDedicatedPage && (
         <Sidebar side="left" collapsible="offcanvas" className="border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30">
           <SidebarHeader className="border-b border-zinc-200 dark:border-zinc-800 px-4 py-4 bg-transparent select-none">
             <div className="flex items-center justify-between">
