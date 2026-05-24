@@ -410,7 +410,7 @@ export default function AiAssistant({
         {/* Header */}
         <header className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-sm relative z-10 flex-shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            {!isReadOnly && <SidebarTrigger className="h-8 w-8 text-zinc-500 cursor-pointer" />}
+            {!isReadOnly && isDedicatedPage && <SidebarTrigger className="h-8 w-8 text-zinc-500 cursor-pointer" />}
             {activeSession ? (
               <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 truncate max-w-[200px] border-l border-zinc-200 dark:border-zinc-800 pl-2 ml-1 leading-none select-none">
                 {activeSession.title}
@@ -436,6 +436,15 @@ export default function AiAssistant({
             >
               {theme === "light" ? <Moon className="h-4.5 w-4.5" /> : <Sun className="h-4.5 w-4.5" />}
             </button>
+            {!isDedicatedPage && (
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-2 rounded-xl text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors border-0 bg-transparent cursor-pointer"
+                title="Close Assistant"
+              >
+                <X className="h-4.5 w-4.5" />
+              </button>
+            )}
           </div>
         </header>
 
