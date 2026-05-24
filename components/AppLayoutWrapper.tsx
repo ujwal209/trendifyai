@@ -1,11 +1,32 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useAi } from "@/lib/ai-context";
 import AiAssistant from "@/components/AiAssistant";
+import { getCurrentUserAction } from "@/app/actions/auth-actions";
 
 export default function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   const { isOpen, setIsOpen } = useAi();
+  const pathname = usePathname();
+  const isDedicatedRoute = pathname.startsWith("/ai-assistant");
+
+  useEffect(() => {
+    // If it's the dedicated assistant page, do not auto-open the drawer
+    if (isDedicatedRoute) return;
+
+    async function checkAuthAndOpen() {
+      try {
+        const user = await getCurrentUserAction();
+        if (!user) {
+          setIsOpen(true);
+        }
+      } catch (err) {
+        console.error("Auth check failed in AppLayoutWrapper:", err);
+      }
+    }
+    checkAuthAndOpen();
+  }, [setIsOpen, isDedicatedRoute]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f1f3f6] dark:bg-black transition-colors duration-200 relative overflow-x-hidden">
@@ -14,8 +35,8 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
         {children}
       </div>
 
-      {/* AI Assistant Right Sidebar Drawer */}
-      {isOpen && (
+      {/* AI Assistant Right Sidebar Drawer (Fixed Overlay like before) */}
+      {isOpen && !isDedicatedRoute && (
         <div className="fixed inset-0 z-50 overflow-hidden font-sans">
           {/* Backdrop */}
           <div

@@ -22,16 +22,16 @@ const TRENDING_QUERIES = [
 ];
 
 const CATEGORY_SEARCH_QUERIES: Record<string, string> = {
-  mobiles: "smartphones 5G unlocked",
-  laptops: "best laptops deals",
-  electronics: "wireless headphones smartwatch speakers",
-  fashion: "mens womens sneakers clothing fashion",
-  home: "kitchen appliances vacuum home essentials",
-  books: "best selling books fiction non-fiction",
-  beauty: "best skincare makeup beauty products",
-  sports: "sports fitness gym equipment",
-  toys: "trending toys kids board games",
-  automotive: "car accessories automotive tools",
+  mobiles: "smartphones",
+  laptops: "laptops",
+  electronics: "headphones",
+  fashion: "clothing",
+  home: "kitchen",
+  books: "books",
+  beauty: "makeup",
+  sports: "fitness",
+  toys: "toys",
+  automotive: "car accessories",
 };
 
 /**
@@ -50,11 +50,28 @@ function parsePriceString(raw: string | number | undefined): number {
   return isNaN(parsed) ? 0 : parsed;
 }
 
+// ---------------------------------------------------------------------------
+// In-memory Serper Query Cache
+// ---------------------------------------------------------------------------
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+}
+const serperCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes in ms
+
 /**
  * Fetches Google Shopping results from Serper.dev using multiple API keys in
  * round-robin rotation with failover.
  */
 async function fetchSerperShopping(query: string, gl: string = "us", page: number = 1): Promise<any> {
+  const cacheKey = `${query}:${gl}:${page}`;
+  const cached = serperCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log(`[Serper] Cache hit for q="${query}" gl="${gl}" page=${page}`);
+    return cached.data;
+  }
+
   const keysString = process.env.SERP_API_KEYS || "";
   const keys = keysString
     .split(",")
@@ -84,7 +101,7 @@ async function fetchSerperShopping(query: string, gl: string = "us", page: numbe
         },
         body: JSON.stringify({ q: query, num: 40, gl, page }),
         cache: "no-store",
-        signal: AbortSignal.timeout(2500), // 2.5s timeout guard for slow network
+        signal: AbortSignal.timeout(6000), // 6s timeout guard for slow network
       });
 
       if (!res.ok) {
@@ -103,6 +120,7 @@ async function fetchSerperShopping(query: string, gl: string = "us", page: numbe
 
       keyIndex = (activeKeyIdx + 1) % keys.length;
       console.log(`[Serper] Success — ${data.shopping?.length ?? 0} shopping results returned.`);
+      serperCache.set(cacheKey, { data, timestamp: Date.now() });
       return data;
 
     } catch (err: any) {
@@ -277,109 +295,10 @@ export async function fetchProductsAction(
       if (groupedProducts.length > 0) return groupedProducts;
     }
 
-    // -----------------------------------------------------------------------
-    // FALLBACK: Local product catalog with simulated offers
-    // -----------------------------------------------------------------------
-    console.log("[Comparator] Falling back to local product catalog.");
-
-    let filteredList = PRODUCTS;
-    if (category !== "all") {
-      filteredList = PRODUCTS.filter((p) => p.category === category);
-    }
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filteredList = PRODUCTS.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q)
-      );
-    }
-
-    // Dynamic expansion of local catalog if results are sparse (less than 12)
-    if (filteredList.length > 0 && filteredList.length < 12) {
-      const expandedList = [...filteredList];
-      const modifiers = [
-        "Pro", "Max", "Ultra", "Plus", "Elite", "Special Edition", 
-        "V2", "2025 Edition", "Classic", "Premium", "Air", "Go"
-      ];
-      let modIndex = 0;
-      while (expandedList.length < 24) {
-        const baseProduct = filteredList[expandedList.length % filteredList.length];
-        const modifier = modifiers[modIndex % modifiers.length];
-        modIndex++;
-
-        // Alter price slightly to look realistic (between 80% and 130% of base price)
-        const priceMultiplier = 0.8 + (Math.sin(expandedList.length) * 0.25); 
-        const newPrice = Math.round(baseProduct.price * priceMultiplier);
-        const newOriginalPrice = Math.round(baseProduct.originalPrice * priceMultiplier);
-        
-        expandedList.push({
-          ...baseProduct,
-          id: `${baseProduct.id}-var-${expandedList.length}`,
-          name: `${baseProduct.name} (${modifier})`,
-          price: newPrice,
-          originalPrice: newOriginalPrice,
-          rating: parseFloat((4.0 + (Math.cos(expandedList.length) * 0.8)).toFixed(1)),
-          ratingCount: Math.floor(baseProduct.ratingCount * priceMultiplier),
-        });
-      }
-      filteredList = expandedList;
-    }
-
-    // Conversion rate relative to INR (since local catalog prices are in INR)
-    const getConversionRate = (targetGl: string) => {
-      switch (targetGl.toLowerCase()) {
-        case "us": return 1 / 83; // 1 USD = 83 INR
-        case "uk": return 1 / 105; // 1 GBP = 105 INR
-        case "ca": return 1 / 61; // 1 CAD = 61 INR
-        case "au": return 1 / 55; // 1 AUD = 55 INR
-        case "de":
-        case "fr": return 1 / 90; // 1 EUR = 90 INR
-        case "jp": return 1.8; // 1 JPY = 0.55 INR
-        case "in":
-        default: return 1.0;
-      }
-    };
-
-    const rate = getConversionRate(gl);
-    const currencySymbol = getCurrencySymbol(gl);
-
-    // Paginate fallback results to avoid overloading the first page loading
-    const pageSize = 12;
-    const startIndex = (page - 1) * pageSize;
-    const paginatedList = filteredList.slice(startIndex, startIndex + pageSize);
-
-    return paginatedList.map((product) => {
-      const convertedPrice = Math.round(product.price * rate);
-      const convertedOriginalPrice = Math.round(product.originalPrice * rate);
-
-      const simulatedOffers = getSimulatedOffers(
-        convertedPrice,
-        convertedOriginalPrice,
-        product.name,
-        gl
-      ).sort((a, b) => a.price - b.price);
-
-      return {
-        ...product,
-        price: simulatedOffers[0].price,
-        originalPrice: simulatedOffers[0].originalPrice,
-        discount: Math.round(
-          ((simulatedOffers[0].originalPrice - simulatedOffers[0].price) /
-            simulatedOffers[0].originalPrice) * 100
-        ),
-        offers: simulatedOffers,
-        currencySymbol,
-      };
-    });
-
+    return [];
   } catch (error) {
     console.error("[fetchProductsAction] Unexpected error:", error);
-    const currencySymbol = getCurrencySymbol(gl);
-    return PRODUCTS.map((product) => ({
-      ...product,
-      offers: getSimulatedOffers(product.price, product.originalPrice, product.name, gl),
-      currencySymbol,
-    }));
+    return [];
   }
 }
 
@@ -418,7 +337,7 @@ export async function getAutocompleteSuggestionsAction(
         },
         body: JSON.stringify({ q: rawQuery }),
         cache: "no-store",
-        signal: AbortSignal.timeout(2500), // 2.5s timeout guard
+        signal: AbortSignal.timeout(6000), // 6s timeout guard
       });
 
       if (!res.ok) continue;

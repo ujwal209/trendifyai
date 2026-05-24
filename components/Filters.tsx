@@ -114,9 +114,9 @@ export default function Filters({
             className="w-full"
           />
           <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 dark:text-zinc-400 mt-1">
-            <span>Min: {currencySymbol}{sliderMin.toLocaleString()}</span>
+            <span>Min: {currencySymbol || ""}{(sliderMin || 0).toLocaleString()}</span>
             <span className="font-black text-[#2874f0] dark:text-blue-400">
-              Max: {currencySymbol}{maxPrice.toLocaleString()}
+              Max: {currencySymbol || ""}{(maxPrice || 0).toLocaleString()}
             </span>
           </div>
         </div>

@@ -12,7 +12,7 @@ import Filters from "@/components/Filters";
 import ProductCard from "@/components/ProductCard";
 import Footer from "@/components/Footer";
 
-import { fetchProductsAction } from "@/app/actions/fetch-products";
+// Remove Server Action import
 import { ComparatorProduct } from "@/lib/products";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAi } from "@/lib/ai-context";
@@ -57,13 +57,14 @@ function HomeContent() {
       setPage(1);
       setHasMore(true);
       try {
-        const results = await fetchProductsAction(searchQuery, "all", currentGl, 1);
+        const res = await fetch(`/api/products?query=${encodeURIComponent(searchQuery)}&gl=${currentGl}&page=1`);
+        const results = await res.json();
         setProducts(results);
         // Serper Shopping usually returns up to 40 products. If it is >= 10, let's enable paginating
         setHasMore(results.length >= 10);
       } catch (err) {
         console.error("Failed to load products from Server Action:", err);
-        toast.error("Error fetching live deals from web. Simulated fallback applied.");
+        toast.error("Error fetching live deals from web.");
       }
       setLoading(false);
     }
@@ -77,7 +78,8 @@ function HomeContent() {
     async function loadMoreProducts() {
       setLoadingMore(true);
       try {
-        const results = await fetchProductsAction(searchQuery, "all", currentGl, page);
+        const res = await fetch(`/api/products?query=${encodeURIComponent(searchQuery)}&gl=${currentGl}&page=${page}`);
+        const results = await res.json();
         if (results.length > 0) {
           // Filter duplicates in case Serper returns overlapping listings across pages
           setProducts((prev) => {

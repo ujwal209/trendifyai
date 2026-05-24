@@ -11,7 +11,7 @@ import Filters from "@/components/Filters";
 import ProductCard from "@/components/ProductCard";
 import Footer from "@/components/Footer";
 
-import { fetchProductsAction } from "@/app/actions/fetch-products";
+// Remove Server Action import
 import { ComparatorProduct } from "@/lib/products";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAi } from "@/lib/ai-context";
@@ -57,12 +57,13 @@ function CategoryContent() {
       setPage(1);
       setHasMore(true);
       try {
-        const results = await fetchProductsAction("", categoryId, currentGl, 1);
+        const res = await fetch(`/api/products?category=${categoryId}&gl=${currentGl}&page=1`);
+        const results = await res.json();
         setProducts(results);
         setHasMore(results.length >= 10);
       } catch (err) {
         console.error("Failed to load category products from Server Action:", err);
-        toast.error("Error fetching live category deals. Simulated fallback applied.");
+        toast.error("Error fetching live category deals.");
       }
       setLoading(false);
     }
@@ -76,7 +77,8 @@ function CategoryContent() {
     async function loadMoreCategoryProducts() {
       setLoadingMore(true);
       try {
-        const results = await fetchProductsAction("", categoryId, currentGl, page);
+        const res = await fetch(`/api/products?category=${categoryId}&gl=${currentGl}&page=${page}`);
+        const results = await res.json();
         if (results.length > 0) {
           setProducts((prev) => {
             const existingIds = new Set(prev.map((p) => p.id));

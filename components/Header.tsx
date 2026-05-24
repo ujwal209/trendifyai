@@ -27,7 +27,7 @@ function HeaderContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { watchlistItems, openWatchlist } = useWatchlist();
-  const { setIsOpen } = useAi();
+  const { isOpen, setIsOpen } = useAi();
 
   const [inputVal, setInputVal] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -246,7 +246,7 @@ function HeaderContent() {
                 if (currentUser) {
                   router.push(`/ai-assistant?gl=${currentGl}`);
                 } else {
-                  setIsOpen(true);
+                  setIsOpen(!isOpen);
                 }
               }}
               className="p-2 hover:bg-white/10 rounded-lg text-white transition-all border-0 bg-transparent cursor-pointer"
@@ -467,7 +467,7 @@ function HeaderContent() {
               if (currentUser) {
                 router.push(`/ai-assistant?gl=${currentGl}`);
               } else {
-                setIsOpen(true);
+                setIsOpen(!isOpen);
               }
             }}
             className="relative flex items-center gap-2 text-sm font-bold transition-all hover:text-zinc-150 cursor-pointer hover:scale-105 active:scale-95"
