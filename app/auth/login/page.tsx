@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { loginAction } from "@/app/actions/auth-actions";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentGl = searchParams.get("gl") || "us";
@@ -104,7 +104,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-3.5 text-zinc-450 hover:text-zinc-650 dark:hover:text-zinc-200"
+                  className="absolute right-3.5 top-3.5 text-zinc-450 hover:text-zinc-655 dark:hover:text-zinc-200"
                 >
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
@@ -140,5 +140,17 @@ export default function LoginPage() {
         </form>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full max-w-lg flex items-center justify-center p-12 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 }

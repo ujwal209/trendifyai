@@ -2,7 +2,6 @@
 
 import React from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 
 export default function AuthLayout({
@@ -10,18 +9,15 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const searchParams = useSearchParams();
-  const currentGl = searchParams.get("gl") || "us";
-
   return (
     <div className="min-h-screen w-full flex flex-col justify-between items-center px-4 py-12 relative bg-[#fafafa] dark:bg-black font-sans antialiased">
       
       {/* Clean Background */}
       <div className="absolute inset-0 bg-[#fafafa] dark:bg-black pointer-events-none" />
-
+ 
       {/* Global Brand Header */}
       <div className="w-full max-w-lg mx-auto z-10 flex flex-col items-center mb-6 text-center select-none">
-        <Link href={`/?gl=${currentGl}`} className="flex flex-col items-center cursor-pointer group">
+        <Link href="/" className="flex flex-col items-center cursor-pointer group">
           {/* Logo keeps its custom italic styling */}
           <span className="text-3xl font-black italic tracking-wide leading-none text-zinc-900 dark:text-white">
             Trendify

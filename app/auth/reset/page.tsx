@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -18,7 +18,7 @@ import {
 
 import { resetPasswordAction } from "@/app/actions/auth-actions";
 
-export default function ResetPage() {
+function ResetPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentGl = searchParams.get("gl") || "us";
@@ -75,7 +75,7 @@ export default function ResetPage() {
         <CardHeader className="relative pb-4 flex flex-col items-center">
           <Link
             href={`/auth/forgot?gl=${currentGl}`}
-            className="absolute left-4 top-4 text-zinc-450 hover:text-zinc-650 dark:hover:text-zinc-200 flex items-center gap-1 text-[10px] font-bold tracking-wide"
+            className="absolute left-4 top-4 text-zinc-450 hover:text-zinc-655 dark:hover:text-zinc-200 flex items-center gap-1 text-[10px] font-bold tracking-wide"
           >
             <ArrowLeft className="size-3" />
             Back
@@ -127,7 +127,7 @@ export default function ResetPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-3.5 text-zinc-450 hover:text-zinc-650 dark:hover:text-zinc-200"
+                  className="absolute right-3.5 top-3.5 text-zinc-455 hover:text-zinc-650 dark:hover:text-zinc-200"
                 >
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
@@ -168,5 +168,17 @@ export default function ResetPage() {
         </form>
       </Card>
     </div>
+  );
+}
+
+export default function ResetPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full max-w-lg flex items-center justify-center p-12 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
+      </div>
+    }>
+      <ResetPageContent />
+    </Suspense>
   );
 }

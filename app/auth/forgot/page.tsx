@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { sendResetOtpAction } from "@/app/actions/auth-actions";
 
-export default function ForgotPage() {
+function ForgotPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentGl = searchParams.get("gl") || "us";
@@ -105,5 +105,17 @@ export default function ForgotPage() {
         </form>
       </Card>
     </div>
+  );
+}
+
+export default function ForgotPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full max-w-lg flex items-center justify-center p-12 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
+      </div>
+    }>
+      <ForgotPageContent />
+    </Suspense>
   );
 }
