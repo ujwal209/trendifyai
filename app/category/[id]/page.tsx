@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Toaster, toast } from "sonner";
 import { SlidersHorizontal, ArrowUpDown, X } from "lucide-react";
 
 import Header from "@/components/Header";
 import CategoryBar from "@/components/CategoryBar";
-import PromoCarousel from "@/components/PromoCarousel";
 import Filters from "@/components/Filters";
 import ProductCard from "@/components/ProductCard";
 import Footer from "@/components/Footer";
@@ -18,13 +17,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAi } from "@/lib/ai-context";
 import { cn } from "@/lib/utils";
 
-function HomeContent() {
+function CategoryContent() {
+  const params = useParams();
   const searchParams = useSearchParams();
-  const searchQuery = searchParams.get("q") || "";
+  const categoryId = (params.id as string) || "all";
   const currentGl = searchParams.get("gl") || "us";
   const { isOpen } = useAi();
 
-  // Dynamic products list fetched from SerpAPI action
+  // Dynamic products list
   const [products, setProducts] = useState<ComparatorProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,39 +47,37 @@ function HomeContent() {
   // Sorting State
   const [sortBy, setSortBy] = useState("popularity");
 
-  // Mobile Filters drawer toggle
+  // Mobile Filters toggle
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Fetch initial products when search query or country changes
+  // Fetch initial category products when category or country changes
   useEffect(() => {
-    async function loadLiveProducts() {
+    async function loadCategoryProducts() {
       setLoading(true);
       setPage(1);
       setHasMore(true);
       try {
-        const results = await fetchProductsAction(searchQuery, "all", currentGl, 1);
+        const results = await fetchProductsAction("", categoryId, currentGl, 1);
         setProducts(results);
-        // Serper Shopping usually returns up to 40 products. If it is >= 10, let's enable paginating
         setHasMore(results.length >= 10);
       } catch (err) {
-        console.error("Failed to load products from Server Action:", err);
-        toast.error("Error fetching live deals from web. Simulated fallback applied.");
+        console.error("Failed to load category products from Server Action:", err);
+        toast.error("Error fetching live category deals. Simulated fallback applied.");
       }
       setLoading(false);
     }
-    loadLiveProducts();
-  }, [searchQuery, currentGl]);
+    loadCategoryProducts();
+  }, [categoryId, currentGl]);
 
-  // Fetch more products when page increases
+  // Fetch more category products when page increases
   useEffect(() => {
     if (page === 1) return;
 
-    async function loadMoreProducts() {
+    async function loadMoreCategoryProducts() {
       setLoadingMore(true);
       try {
-        const results = await fetchProductsAction(searchQuery, "all", currentGl, page);
+        const results = await fetchProductsAction("", categoryId, currentGl, page);
         if (results.length > 0) {
-          // Filter duplicates in case Serper returns overlapping listings across pages
           setProducts((prev) => {
             const existingIds = new Set(prev.map((p) => p.id));
             const newItems = results.filter((p) => !existingIds.has(p.id));
@@ -88,16 +86,16 @@ function HomeContent() {
           setHasMore(results.length >= 10);
         } else {
           setHasMore(false);
-          toast.info("No more deals found.");
+          toast.info("No more deals found in this category.");
         }
       } catch (err) {
-        console.error("Failed to load more products:", err);
+        console.error("Failed to load more category products:", err);
         setHasMore(false);
       }
       setLoadingMore(false);
     }
-    loadMoreProducts();
-  }, [page, searchQuery, currentGl]);
+    loadMoreCategoryProducts();
+  }, [page, categoryId, currentGl]);
 
   // Determine if loaded products are in decimal currencies (non-INR) or INR
   const isUSD = currentGl !== "in";
@@ -113,6 +111,7 @@ function HomeContent() {
     return Math.max(...products.map((p) => p.price));
   }, [products, isUSD]);
 
+  // Derive only brands that exist in this category search results
   const allBrands = useMemo(() => {
     return Array.from(new Set(products.map((p) => p.brand))).sort();
   }, [products]);
@@ -136,7 +135,7 @@ function HomeContent() {
     }
   }, [products, maxProductPrice, isUSD]);
 
-  // Filtered Products
+  // Filtered Products for this category
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       // Price Filter
@@ -199,8 +198,10 @@ function HomeContent() {
     setSelectedStores([]);
     setFreeDeliveryOnly(false);
     setAssuredOnly(false);
-    toast.info("All filters cleared");
+    toast.info("Filters cleared for this category");
   };
+
+  const categoryName = categoryId.charAt(0).toUpperCase() + categoryId.slice(1);
 
   return (
     <div className="min-h-screen bg-[#f1f3f6] dark:bg-black font-sans pb-0 flex flex-col justify-between transition-colors duration-200">
@@ -211,14 +212,19 @@ function HomeContent() {
         <Header />
 
         {/* Category Navigation Bar */}
-        <CategoryBar selectedCategory="all" />
+        <CategoryBar selectedCategory={categoryId} />
 
         <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-4">
-          {/* Banner Carousel (Hide when searching) */}
-          {!searchQuery && <PromoCarousel />}
+          
+          {/* Breadcrumbs */}
+          <div className="flex items-center gap-2 text-xs font-semibold text-zinc-400 dark:text-zinc-500 mb-4 px-1">
+            <span>Home</span>
+            <span>&gt;</span>
+            <span className="text-zinc-600 dark:text-zinc-300 font-bold">{categoryName}</span>
+          </div>
 
           {/* Catalog Section */}
-          <div className="mt-5 flex gap-4 items-start">
+          <div className="flex gap-4 items-start">
             
             {/* Left Sidebar: Filters (Hidden on Mobile) */}
             <div className={cn(
@@ -257,7 +263,7 @@ function HomeContent() {
                 {/* Count / Title */}
                 <div className="flex items-baseline gap-2">
                   <h2 className="text-base font-black text-zinc-900 dark:text-zinc-50">
-                    {searchQuery ? `Search Results for "${searchQuery}"` : "Trending Product Deals"}
+                    Shop {categoryName} Comparisons
                   </h2>
                   <span className="text-xs font-semibold text-zinc-400">
                     ({sortedProducts.length} items found)
@@ -298,7 +304,7 @@ function HomeContent() {
                 </div>
               </div>
 
-              {/* Products Grid & Loaders */}
+              {/* Products Grid / Skeletons */}
               {loading ? (
                 <div className={cn(
                   "grid grid-cols-1 gap-4 sm:grid-cols-2",
@@ -332,9 +338,9 @@ function HomeContent() {
                     alt="No Results"
                     className="w-36 h-36 object-cover rounded-full opacity-60"
                   />
-                  <h3 className="mt-4 text-base font-black">No Compared Products Match Your Filters!</h3>
+                  <h3 className="mt-4 text-base font-black">No Products Match Your Filters!</h3>
                   <p className="mt-1 text-xs text-zinc-500 max-w-sm dark:text-zinc-400">
-                    Try adjusting your price slider, selecting different brands, or clearing active filters to browse the full comparator catalog.
+                    Try adjusting your price slider, selecting different brands, or clearing active filters to browse the full catalog.
                   </p>
                   <button
                     onClick={handleClearFilters}
@@ -435,7 +441,7 @@ function HomeContent() {
   );
 }
 
-export default function Home() {
+export default function CategoryPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-[#f1f3f6] dark:bg-black font-sans flex flex-col">
@@ -443,12 +449,12 @@ export default function Home() {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="h-8 w-8 border-4 border-[#2874f0] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-sm font-semibold text-zinc-500">Loading catalog...</p>
+            <p className="text-sm font-semibold text-zinc-500">Loading products...</p>
           </div>
         </div>
       </div>
     }>
-      <HomeContent />
+      <CategoryContent />
     </Suspense>
   );
 }

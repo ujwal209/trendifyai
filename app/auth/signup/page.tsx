@@ -1,0 +1,159 @@
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import { Lock, Mail, Loader2, Sparkles, Eye, EyeOff } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+  Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle 
+} from "@/components/ui/card";
+import { sendOtpAction } from "@/app/actions/auth-actions";
+
+export default function SignupPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentGl = searchParams.get("gl") || "us";
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSignupRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password || !confirmPassword) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await sendOtpAction(email, password);
+      if (res.success) {
+        toast.success(
+          res.deliveryMethod === "email"
+            ? "Verification code sent to your email!"
+            : "Verification code generated in console log!"
+        );
+        router.push(`/auth/verify?email=${encodeURIComponent(res.email || email)}&gl=${currentGl}`);
+      } else {
+        toast.error(res.error || "Failed to initiate signup");
+      }
+    } catch (err) {
+      toast.error("An error occurred during signup");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="w-full max-w-lg transition-all duration-300">
+      <Card className="relative border border-zinc-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-950 rounded-xl pt-6">
+        
+        <CardHeader className="pb-4 flex flex-col items-center">
+          <CardTitle className="text-2xl font-black text-zinc-900 dark:text-white">Create Account</CardTitle>
+          <CardDescription className="text-xs text-zinc-500 dark:text-zinc-400 text-center mt-1">
+            Compare prices, customize alerts, and track watchlists.
+          </CardDescription>
+        </CardHeader>
+
+        <form onSubmit={handleSignupRequest}>
+          <CardContent className="space-y-4 pb-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="signup-email" className="text-xs font-bold tracking-wide text-zinc-700 dark:text-zinc-300">Email Address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-3.5 size-4 text-zinc-400" />
+                <Input
+                  id="signup-email"
+                  type="email"
+                  placeholder="name@example.com"
+                  className="pl-10 h-11 bg-zinc-50/50 dark:bg-zinc-900/40 text-sm rounded-lg focus-visible:ring-indigo-500 focus-visible:ring-offset-2 transition-all border-zinc-250 dark:border-zinc-800"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="signup-password" className="text-xs font-bold tracking-wide text-zinc-700 dark:text-zinc-300">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-3.5 size-4 text-zinc-400" />
+                <Input
+                  id="signup-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Min 6 characters"
+                  className="pl-10 pr-10 h-11 bg-zinc-50/50 dark:bg-zinc-900/40 text-sm rounded-lg focus-visible:ring-indigo-500 focus-visible:ring-offset-2 transition-all border-zinc-250 dark:border-zinc-800"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-3.5 text-zinc-450 hover:text-zinc-650 dark:hover:text-zinc-200"
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="signup-confirm" className="text-xs font-bold tracking-wide text-zinc-700 dark:text-zinc-300">Confirm Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-3.5 size-4 text-zinc-400" />
+                <Input
+                  id="signup-confirm"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Confirm your password"
+                  className="pl-10 h-11 bg-zinc-50/50 dark:bg-zinc-900/40 text-sm rounded-lg focus-visible:ring-indigo-500 focus-visible:ring-offset-2 transition-all border-zinc-250 dark:border-zinc-800"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4 pt-2">
+            <Button 
+              type="submit" 
+              className="w-full h-11 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 text-white rounded-lg text-sm font-medium transition-colors"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  Sending Code...
+                </>
+              ) : (
+                "Sign Up"
+              )}
+            </Button>
+            
+            <div className="text-[11px] font-medium text-center text-zinc-500">
+              Already have an account?{" "}
+              <Link 
+                href={`/auth/login?gl=${currentGl}`} 
+                className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                Log In
+              </Link>
+            </div>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
+  );
+}
